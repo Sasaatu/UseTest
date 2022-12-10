@@ -6,12 +6,15 @@ from math import pi
 
 class Computation_Curve:
     
-    def __init__(self, t_vector, P_elem):
-        self.t_vector = t_vector
+    def __init__(self, t, P_elem):
+        self.t = t      # knot vector
         self.P_elem = P_elem
         self.num_ctrl = P_elem.shape[0]
         self.degree = self.num_ctrl-1
         self.idx_list_pr = np.arange(0, self.num_ctrl, 1)
+        
+        self.num_t = t.shape[0]
+        self.degreeB = self.num_t - self.num_ctrl - 1
     
     def Bezier_Curve(self, idx_list_pr, deg):
         # Recursive function
@@ -27,12 +30,33 @@ class Computation_Curve:
             P_chl1 = self.Bezier_Curve(idx_list_chl1, deg)
             P_chl2 = self.Bezier_Curve(idx_list_chl2, deg)
         
-        P_pr = (1-self.t_vector)*P_chl1 + self.t_vector*P_chl2
+        P_pr = (1-self.t)*P_chl1 + self.t*P_chl2
         
         return P_pr
     
     def BSpline_Curve(self):
-        print('now working')
+        
+        BSpline = np.zeros([self.num_t,2])
+        for i in range(0, self.num_ctrl):
+            BSpline = self.P_elem[i,:] * self.BFunction(i,self.degreeB)
+            
+        return BSpline
+            
+    def BFunction(self, pos, deg):
+        # Recursive function
+
+        if deg == 0:
+            B = np.zeros([self.num_t,1])
+            for j in range(0, self.num_t):
+                if self.t[j]>=self.t[pos] and self.t[j]<self.t[pos+1]:
+                    B[j] = 1
+                else:
+                    B[j] = 0
+        else:
+            B = (self.t-self.t[pos])/(self.t[pos+deg]-self.t[pos]) * self.BFunction(pos,deg-1) + \
+                (self.t[pos+deg+1]-self.t)/(self.t[pos+deg+1]-self.t[pos+1]) * self.BFunction(pos+1,deg-1)
+        
+        return B
 
 
 class Bezier_Polygon():
