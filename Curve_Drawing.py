@@ -1,5 +1,6 @@
 
 import numpy as np
+import matplotlib.pyplot as plt
 import random
 import math
 from math import pi
@@ -13,8 +14,9 @@ class Computation_Curve:
         self.degree = self.num_ctrl-1
         self.idx_list_pr = np.arange(0, self.num_ctrl, 1)
         
+        
         self.num_t = t.shape[0]
-        self.degreeB = self.num_t - self.num_ctrl - 1
+        self.degreeB = self.num_t - self.num_ctrl
     
     def Bezier_Curve(self, idx_list_pr, deg):
         # Recursive function
@@ -36,26 +38,37 @@ class Computation_Curve:
     
     def BSpline_Curve(self):
         
+        
         BSpline = np.zeros([self.num_t,2])
         for i in range(0, self.num_ctrl):
-            BSpline = self.P_elem[i,:] * self.BFunction(i,self.degreeB)
+            Basis = self.BFunction(i,self.degreeB)
+            BSpline += self.P_elem[i,:] * Basis
             
+            h = plt.figure(num='Basis function')
+            plt.plot(self.t, Basis)
+
+        plt.show()    
         return BSpline
             
     def BFunction(self, pos, deg):
         # Recursive function
-
-        if deg == 0:
+        if deg == 1:
             B = np.zeros([self.num_t,1])
-            for j in range(0, self.num_t):
-                if self.t[j]>=self.t[pos] and self.t[j]<self.t[pos+1]:
-                    B[j] = 1
-                else:
-                    B[j] = 0
+            if pos == self.degreeB + self.num_ctrl-1:
+                for j in range(0, self.num_t):
+                    if self.t[j]>=self.t[pos]:
+                        B[j] = 1
+                    else:
+                        B[j] = 0
+            else:
+                for j in range(0, self.num_t):
+                    if self.t[j]>=self.t[pos] and self.t[j]<self.t[pos+1]:
+                        B[j] = 1
+                    else:
+                        B[j] = 0
         else:
-            B = (self.t-self.t[pos])/(self.t[pos+deg]-self.t[pos]) * self.BFunction(pos,deg-1) + \
-                (self.t[pos+deg+1]-self.t)/(self.t[pos+deg+1]-self.t[pos+1]) * self.BFunction(pos+1,deg-1)
-        
+            B = (self.t-self.t[pos])/(self.t[pos+deg-1]-self.t[pos]) * self.BFunction(pos,deg-1) + \
+            (self.t[pos+deg]-self.t)/(self.t[pos+deg]-self.t[pos+1]) * self.BFunction(pos+1,deg-1)
         return B
 
 
