@@ -7,16 +7,18 @@ from math import pi
 
 class Computation_Curve:
     
-    def __init__(self, t, P_elem):
-        self.t = t      # knot vector
-        self.P_elem = P_elem
+    def __init__(self, tvec, P_elem, res):
+        self.tvec = tvec      # knot vector
+        self.P_elem = P_elem    # control point
         self.num_ctrl = P_elem.shape[0]
         self.degree = self.num_ctrl-1
         self.idx_list_pr = np.arange(0, self.num_ctrl, 1)
         
+        self.num_t = tvec.shape[0]
+        self.degreeB = self.num_t - (self.num_ctrl+1)
+        self.res = res
+        self.tvar = np.linspace(0,1,self.res).reshape(self.res,1)
         
-        self.num_t = t.shape[0]
-        self.degreeB = self.num_t - self.num_ctrl
     
     def Bezier_Curve(self, idx_list_pr, deg):
         # Recursive function
@@ -36,40 +38,71 @@ class Computation_Curve:
         
         return P_pr
     
+    
     def BSpline_Curve(self):
         
+        global AxesB0, AxesBk 
         
-        BSpline = np.zeros([self.num_t,2])
+        # plot Basis function
+        hBk = plt.figure(num='k order Basis function')
+        AxesBk = hBk.add_subplot()
+        hB0 = plt.figure(num='0 order Basis function')
+        AxesB0 = hB0.add_subplot()
+        
+        # compute curve
+        BSpline = np.zeros([self.res,2])
         for i in range(0, self.num_ctrl):
-            Basis = self.BFunction(i,self.degreeB)
+            Basis = self.BFunction(i, self.degreeB)
             BSpline += self.P_elem[i,:] * Basis
             
-            h = plt.figure(num='Basis function')
-            plt.plot(self.t, Basis)
-
-        plt.show()    
+        # plot knot vector
+        AxesBk.plot(self.tvec, np.zeros([self.num_t,1]), 'k+')
+        AxesB0.plot(self.tvec, np.zeros([self.num_t,1]), 'k+')
+        
         return BSpline
+    
             
     def BFunction(self, pos, deg):
+        
+        global AxesB0, AxesBk 
+        
         # Recursive function
-        if deg == 1:
-            B = np.zeros([self.num_t,1])
-            if pos == self.degreeB + self.num_ctrl-1:
-                for j in range(0, self.num_t):
-                    if self.t[j]>=self.t[pos]:
+        if deg == 0:
+            B = np.zeros([self.res,1])
+            
+            for j in range(0, self.res):
+                # if effective range reaches t end point include itself
+                if self.tvec[pos+1]==self.tvar[self.res-1] and self.tvec[pos]!=self.tvec[pos+1]:
+                    if self.tvar[j]>=self.tvec[pos] and self.tvar[j]<=self.tvec[pos+1]:
+                            B[j] = 1
+                    else:
+                        B[j] = 0
+                else:
+                    if self.tvar[j]>=self.tvec[pos] and self.tvar[j]<self.tvec[pos+1]:
                         B[j] = 1
                     else:
                         B[j] = 0
-            else:
-                for j in range(0, self.num_t):
-                    if self.t[j]>=self.t[pos] and self.t[j]<self.t[pos+1]:
-                        B[j] = 1
-                    else:
-                        B[j] = 0
+            
+            AxesB0.plot(self.tvar, B)
+            
         else:
-            B = (self.t-self.t[pos])/(self.t[pos+deg-1]-self.t[pos]) * self.BFunction(pos,deg-1) + \
-            (self.t[pos+deg]-self.t)/(self.t[pos+deg]-self.t[pos+1]) * self.BFunction(pos+1,deg-1)
+            if self.tvec[pos+deg]-self.tvec[pos] == 0:
+                C1 = np.ones([self.res,1]) * 9e9
+            else:
+                C1 = (self.tvar-self.tvec[pos])/(self.tvec[pos+deg]-self.tvec[pos])
+                
+            if self.tvec[pos+deg+1]-self.tvec[pos+1] == 0:
+                C2 = np.ones([self.res,1]) * 9e9
+            else:
+                C2 = (self.tvec[pos+deg+1]-self.tvar)/(self.tvec[pos+deg+1]-self.tvec[pos+1])
+            
+            B = C1 * self.BFunction(pos,deg-1) + C2 * self.BFunction(pos+1,deg-1)
+            
+            if deg == self.degreeB:
+              AxesBk.plot(self.tvar, B) 
+            
         return B
+
 
 
 class Bezier_Polygon():
